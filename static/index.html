@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blinky - アニメーション画像ジェネレーター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8eaff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .preview-area {
+            display: none;
+            margin-bottom: 30px;
+        }
+
+        .preview-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .preview-images {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .preview-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            object-fit: cover;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            display: none;
+            background: #f8f9ff;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #99d5ff;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .download-area {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .download-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            font-size: 1.2em;
+            padding: 20px 40px;
+        }
+
+        .download-btn:hover {
+            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .preview-images {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Blinky</h1>
+            <p>アニメーション画像ジェネレーター</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text">画像をドラッグ＆ドロップ</div>
+                <div class="upload-subtext">または、クリックして選択 (JPG/PNG/WebP, 最大3枚)</div>
+                <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
+            </div>
+
+            <div class="preview-area" id="previewArea">
+                <div class="preview-title">アップロードされた画像</div>
+                <div class="preview-images" id="previewImages"></div>
+            </div>
+
+            <div class="controls" id="controls">
+                <div class="control-group">
+                    <label class="control-label" for="formatSelect">出力フォーマット</label>
+                    <select id="formatSelect" class="control-input">
+                        <option value="apng">APNG (推奨)</option>
+                        <option value="webp">WebP (APNGとして出力)</option>
+                        <option value="avif">AVIF (APNGとして出力)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label" for="durationInput">フレーム間隔 (ミリ秒)</label>
+                    <input type="number" id="durationInput" class="control-input" value="500" min="100" max="5000" step="100">
+                </div>
+
+                <button class="btn btn-full" id="generateBtn">アニメーションを生成</button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>アニメーションを生成中...</div>
+            </div>
+
+            <div class="download-area" id="downloadArea">
+                <button class="btn download-btn" id="downloadBtn">ダウンロード</button>
+            </div>
+
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewArea = document.getElementById('previewArea');
+        const previewImages = document.getElementById('previewImages');
+        const controls = document.getElementById('controls');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const downloadArea = document.getElementById('downloadArea');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const status = document.getElementById('status');
+
+        let currentFilename = null;
+        let currentSessionId = null;
+
+        // Upload area click handler
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File input change handler
+        fileInput.addEventListener('change', handleFiles);
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            handleFiles({ target: { files } });
+        });
+
+        // Generate button handler
+        generateBtn.addEventListener('click', generateAnimation);
+
+        // Download button handler
+        downloadBtn.addEventListener('click', downloadFile);
+
+        async function handleFiles(event) {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) return;
+            if (files.length > 3) {
+                showStatus('最大3枚までアップロードできます', 'error');
+                return;
+            }
+
+            // Validate file types
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const invalidFiles = files.filter(file => !validTypes.includes(file.type));
+            
+            if (invalidFiles.length > 0) {
+                showStatus('JPG、PNG、WebP形式のファイルのみ対応しています', 'error');
+                return;
+            }
+
+            // Upload files
+            const formData = new FormData();
+            files.forEach(file => {
+                formData.append('images', file);
+            });
+
+            try {
+                showStatus('アップロード中...', 'info');
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentSessionId = result.sessionId;
+                    showStatus(result.message, 'success');
+                    showPreview(files);
+                    controls.style.display = 'block';
+                } else {
+                    showStatus('アップロードに失敗しました', 'error');
+                }
+            } catch (error) {
+                showStatus('アップロードエラー: ' + error.message, 'error');
+            }
+        }
+
+        function showPreview(files) {
+            previewImages.innerHTML = '';
+            
+            files.forEach(file => {
+                const img = document.createElement('img');
+                img.className = 'preview-image';
+                img.src = URL.createObjectURL(file);
+                previewImages.appendChild(img);
+            });
+
+            previewArea.style.display = 'block';
+        }
+
+        async function generateAnimation() {
+            const format = document.getElementById('formatSelect').value;
+            const duration = parseInt(document.getElementById('durationInput').value);
+
+            if (!currentSessionId) {
+                showStatus('画像を再度アップロードしてください', 'error');
+                return;
+            }
+
+            loading.style.display = 'block';
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        format: format,
+                        duration: duration,
+                        sessionId: currentSessionId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentFilename = result.filename;
+                    showStatus(result.message, 'success');
+                    downloadArea.style.display = 'block';
+                } else {
+                    showStatus('生成に失敗しました: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showStatus('生成エラー: ' + error.message, 'error');
+            } finally {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        }
+
+        function downloadFile() {
+            if (currentFilename) {
+                window.location.href = '/download/' + currentFilename;
+            }
+        }
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+            
+            // Auto-hide after 5 seconds for success/info messages
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
