@@ -293,8 +293,8 @@
                     <label class="control-label" for="formatSelect">出力フォーマット</label>
                     <select id="formatSelect" class="control-input">
                         <option value="apng">APNG (推奨)</option>
-                        <option value="webp">WebP</option>
-                        <option value="avif">AVIF</option>
+                        <option value="webp">WebP (APNGとして出力)</option>
+                        <option value="avif">AVIF (APNGとして出力)</option>
                     </select>
                 </div>
 
@@ -332,6 +332,7 @@
         const status = document.getElementById('status');
 
         let currentFilename = null;
+        let currentSessionId = null;
 
         // Upload area click handler
         uploadArea.addEventListener('click', () => {
@@ -399,6 +400,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    currentSessionId = result.sessionId;
                     showStatus(result.message, 'success');
                     showPreview(files);
                     controls.style.display = 'block';
@@ -427,6 +429,11 @@
             const format = document.getElementById('formatSelect').value;
             const duration = parseInt(document.getElementById('durationInput').value);
 
+            if (!currentSessionId) {
+                showStatus('画像を再度アップロードしてください', 'error');
+                return;
+            }
+
             loading.style.display = 'block';
             generateBtn.disabled = true;
 
@@ -438,7 +445,8 @@
                     },
                     body: JSON.stringify({
                         format: format,
-                        duration: duration
+                        duration: duration,
+                        sessionId: currentSessionId
                     })
                 });
 
