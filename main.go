@@ -58,15 +58,15 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Half-open eye is optional.
+	// Half-open eye is optional; validate only when the field is present.
 	var half image.Image
-	if hf, _, hErr := r.FormFile("half"); hErr == nil {
-		defer hf.Close()
-		if data, rErr := io.ReadAll(hf); rErr == nil {
-			if img, _, dErr := image.Decode(bytes.NewReader(data)); dErr == nil {
-				half = img
-			}
+	if len(r.MultipartForm.File["half"]) > 0 {
+		img, err := readFormImage(r, "half")
+		if err != nil {
+			http.Error(w, "伏せ目の読み込みに失敗しました: "+err.Error(), http.StatusBadRequest)
+			return
 		}
+		half = img
 	}
 
 	preset := blink.GetPreset(r.FormValue("preset"))

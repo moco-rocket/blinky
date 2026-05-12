@@ -263,6 +263,19 @@
       color: #ba68c8;
     }
 
+    /* ── Dimension warning ── */
+    .dim-warn {
+      display: none;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #fff8e1;
+      color: #e65100;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+    .dim-warn.show { display: block; }
+
     /* ── Mobile ── */
     @media (max-width: 420px) {
       header h1  { font-size: 1.7rem; }
@@ -327,6 +340,7 @@
       </div>
 
     </div>
+    <div class="dim-warn" id="dim-warn"></div>
   </div>
 
   <!-- Controls -->
@@ -379,6 +393,29 @@
 
 <script>
   const files = { normal: null, closed: null, half: null };
+  const dims  = {}; // { key: { w, h } } — populated on thumb load
+
+  // ── Dimension consistency check ──
+  function checkDimensions() {
+    const active = Object.keys(files).filter(k => files[k] && dims[k]);
+    if (active.length < 2) { hideDimWarn(); return; }
+    const ref = dims[active[0]];
+    const mismatch = active.some(k => dims[k].w !== ref.w || dims[k].h !== ref.h);
+    if (mismatch) {
+      const detail = active.map(k => `${k}: ${dims[k].w}×${dims[k].h}`).join('、');
+      showDimWarn(`画像サイズが揃っていません（${detail}）。自動で中央揃えされますが、コマ間でずれが生じる場合があります。`);
+    } else {
+      hideDimWarn();
+    }
+  }
+  function showDimWarn(msg) {
+    const el = document.getElementById('dim-warn');
+    el.textContent = '⚠ ' + msg;
+    el.classList.add('show');
+  }
+  function hideDimWarn() {
+    document.getElementById('dim-warn').classList.remove('show');
+  }
 
   const presetHints = {
     normal:  '自然な人間らしい瞬き（3〜5秒間隔）',
@@ -425,7 +462,12 @@
     // Revoke previous object URL to avoid memory leak.
     if (files[key]) URL.revokeObjectURL(document.getElementById('thumb-' + key).src);
     files[key] = file;
-    document.getElementById('thumb-' + key).src = URL.createObjectURL(file);
+    const thumb = document.getElementById('thumb-' + key);
+    thumb.onload = () => {
+      dims[key] = { w: thumb.naturalWidth, h: thumb.naturalHeight };
+      checkDimensions();
+    };
+    thumb.src = URL.createObjectURL(file);
     document.getElementById('zone-' + key).classList.add('filled');
     hideStatus();
   }
@@ -435,8 +477,10 @@
     e.preventDefault();
     if (files[key]) URL.revokeObjectURL(document.getElementById('thumb-' + key).src);
     files[key] = null;
+    delete dims[key];
     document.getElementById('thumb-' + key).src = '';
     document.getElementById('zone-' + key).classList.remove('filled');
+    checkDimensions();
     // Reset file input so the same file can be re-selected.
     const zone = document.getElementById('zone-' + key);
     const input = zone.querySelector('input[type=file]');
