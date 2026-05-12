@@ -1,490 +1,508 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blinky - アニメーション画像ジェネレーター</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blinky — 瞬きアニメーション生成</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: linear-gradient(145deg, #fce4ec 0%, #f3e5f5 55%, #ede7f6 100%);
+      min-height: 100vh;
+      padding: 16px;
+      color: #3e2060;
+    }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
+    .wrap {
+      max-width: 600px;
+      margin: 0 auto;
+    }
 
-        .header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 28px 0 24px;
+    }
+    header h1 {
+      font-size: 2.2rem;
+      letter-spacing: 0.06em;
+      color: #6a1b9a;
+    }
+    header p {
+      margin-top: 6px;
+      font-size: 0.88rem;
+      color: #9c27b0;
+    }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 14px rgba(106, 27, 154, 0.08);
+    }
+    .card-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #7b1fa2;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+    /* ── Upload grid ── */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
 
-        .content {
-            padding: 40px;
-        }
+    .drop-zone {
+      position: relative;
+      border: 2px dashed #ce93d8;
+      border-radius: 14px;
+      padding: 10px 6px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s;
+      background: #fdf6ff;
+      user-select: none;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: #9c27b0;
+      background: #f3e5f5;
+    }
+    .drop-zone.filled {
+      border-style: solid;
+      border-color: #ab47bc;
+    }
 
-        .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 60px 30px;
-            text-align: center;
-            margin-bottom: 30px;
-            background: #f8f9ff;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
+    /* hidden file input overlaid on the zone */
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
 
-        .upload-area:hover {
-            border-color: #764ba2;
-            background: #f0f1ff;
-            transform: translateY(-2px);
-        }
+    .drop-zone .thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: contain;
+      border-radius: 8px;
+      display: none;
+      pointer-events: none;
+    }
+    .drop-zone.filled .thumb { display: block; }
 
-        .upload-area.dragover {
-            border-color: #764ba2;
-            background: #e8eaff;
-            transform: scale(1.02);
-        }
+    .drop-zone .placeholder {
+      padding: 14px 0 4px;
+    }
+    .drop-zone.filled .placeholder { display: none; }
 
-        .upload-icon {
-            font-size: 4em;
-            color: #667eea;
-            margin-bottom: 20px;
-        }
+    .drop-zone .icon {
+      font-size: 1.9rem;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .drop-zone .lbl {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #7b1fa2;
+    }
+    .drop-zone .sub {
+      font-size: 0.65rem;
+      color: #ba68c8;
+      margin-top: 2px;
+    }
 
-        .upload-text {
-            font-size: 1.3em;
-            color: #333;
-            margin-bottom: 10px;
-        }
+    /* clear button */
+    .drop-zone .clear-btn {
+      position: absolute;
+      top: 5px;
+      right: 6px;
+      width: 20px;
+      height: 20px;
+      background: rgba(156, 39, 176, 0.7);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 11px;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      display: none;
+      z-index: 2;
+      padding: 0;
+    }
+    .drop-zone.filled .clear-btn { display: block; }
 
-        .upload-subtext {
-            color: #666;
-            font-size: 0.9em;
-        }
+    /* ── Controls ── */
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
 
-        .file-input {
-            display: none;
-        }
+    .ctrl label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #7b1fa2;
+      margin-bottom: 6px;
+    }
+    .ctrl select {
+      width: 100%;
+      padding: 10px 32px 10px 12px;
+      border: 2px solid #e1bee7;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      color: #4a148c;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237b1fa2' d='M6 8 0 0h12z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      appearance: none;
+      cursor: pointer;
+    }
+    .ctrl select:focus {
+      outline: none;
+      border-color: #9c27b0;
+    }
+    .ctrl .hint {
+      font-size: 0.68rem;
+      color: #ab47bc;
+      margin-top: 5px;
+      min-height: 1em;
+    }
 
-        .preview-area {
-            display: none;
-            margin-bottom: 30px;
-        }
+    /* ── Generate button ── */
+    .gen-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #d48de8 0%, #9c27b0 100%);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border: none;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .gen-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(156, 39, 176, 0.35);
+    }
+    .gen-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
 
-        .preview-title {
-            font-size: 1.3em;
-            margin-bottom: 15px;
-            color: #333;
-        }
+    /* ── Status ── */
+    .status {
+      display: none;
+      margin-top: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+    .status.show  { display: block; }
+    .status.info  { background: #e8f4fd; color: #1565c0; }
+    .status.ok    { background: #e8f5e9; color: #2e7d32; }
+    .status.error { background: #fce4ec; color: #b71c1c; }
 
-        .preview-images {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        .preview-image {
-            width: 120px;
-            height: 120px;
-            border-radius: 10px;
-            border: 2px solid #ddd;
-            object-fit: cover;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
+    /* ── Preview / result ── */
+    .preview-wrap {
+      text-align: center;
+    }
+    .preview-wrap img {
+      max-width: 100%;
+      max-height: 320px;
+      border-radius: 10px;
+      image-rendering: auto;
+    }
+    .dl-btn {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 11px 28px;
+      background: linear-gradient(135deg, #81c784, #388e3c);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 11px;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .dl-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 16px rgba(56, 142, 60, 0.38);
+    }
 
-        .controls {
-            display: none;
-            background: #f8f9ff;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-        }
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 18px 0 10px;
+      font-size: 0.72rem;
+      color: #ba68c8;
+    }
 
-        .control-group {
-            margin-bottom: 20px;
-        }
-
-        .control-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .control-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s ease;
-        }
-
-        .control-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-full {
-            width: 100%;
-        }
-
-        .status {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: bold;
-            display: none;
-        }
-
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status.info {
-            background: #cce7ff;
-            color: #004085;
-            border: 1px solid #99d5ff;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .download-area {
-            display: none;
-            text-align: center;
-            margin-top: 30px;
-        }
-
-        .download-btn {
-            background: linear-gradient(45deg, #28a745, #20c997);
-            font-size: 1.2em;
-            padding: 20px 40px;
-        }
-
-        .download-btn:hover {
-            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
-        }
-
-        @media (max-width: 600px) {
-            .content {
-                padding: 20px;
-            }
-            
-            .header {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .preview-images {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-    </style>
+    /* ── Mobile ── */
+    @media (max-width: 420px) {
+      header h1  { font-size: 1.7rem; }
+      .controls-row { grid-template-columns: 1fr; }
+      .upload-grid  { gap: 7px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎨 Blinky</h1>
-            <p>アニメーション画像ジェネレーター</p>
+<div class="wrap">
+
+  <header>
+    <h1>👁 Blinky</h1>
+    <p>立ち絵に自然な瞬きを。2〜3枚アップロードするだけ。</p>
+  </header>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="card-title">画像をアップロード</div>
+    <div class="upload-grid">
+
+      <div class="drop-zone" id="zone-normal"
+           ondragover="onDragOver(event,this)" ondragleave="onDragLeave(this)"
+           ondrop="onDrop(event,'normal')">
+        <input type="file" accept="image/png,image/jpeg,image/webp"
+               onchange="onPick('normal',this)" title="通常顔">
+        <button class="clear-btn" onclick="clearZone(event,'normal')" title="削除">✕</button>
+        <img class="thumb" id="thumb-normal" alt="通常顔プレビュー">
+        <div class="placeholder">
+          <span class="icon">😊</span>
+          <div class="lbl">通常顔</div>
+          <div class="sub">必須</div>
         </div>
+      </div>
 
-        <div class="content">
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📸</div>
-                <div class="upload-text">画像をドラッグ＆ドロップ</div>
-                <div class="upload-subtext">または、クリックして選択 (JPG/PNG/WebP, 最大3枚)</div>
-                <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
-            </div>
-
-            <div class="preview-area" id="previewArea">
-                <div class="preview-title">アップロードされた画像</div>
-                <div class="preview-images" id="previewImages"></div>
-            </div>
-
-            <div class="controls" id="controls">
-                <div class="control-group">
-                    <label class="control-label" for="formatSelect">出力フォーマット</label>
-                    <select id="formatSelect" class="control-input">
-                        <option value="apng">APNG (推奨)</option>
-                        <option value="webp">WebP (APNGとして出力)</option>
-                        <option value="avif">AVIF (APNGとして出力)</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <label class="control-label" for="durationInput">フレーム間隔 (ミリ秒)</label>
-                    <input type="number" id="durationInput" class="control-input" value="500" min="100" max="5000" step="100">
-                </div>
-
-                <button class="btn btn-full" id="generateBtn">アニメーションを生成</button>
-            </div>
-
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <div>アニメーションを生成中...</div>
-            </div>
-
-            <div class="download-area" id="downloadArea">
-                <button class="btn download-btn" id="downloadBtn">ダウンロード</button>
-            </div>
-
-            <div class="status" id="status"></div>
+      <div class="drop-zone" id="zone-closed"
+           ondragover="onDragOver(event,this)" ondragleave="onDragLeave(this)"
+           ondrop="onDrop(event,'closed')">
+        <input type="file" accept="image/png,image/jpeg,image/webp"
+               onchange="onPick('closed',this)" title="閉じ目">
+        <button class="clear-btn" onclick="clearZone(event,'closed')" title="削除">✕</button>
+        <img class="thumb" id="thumb-closed" alt="閉じ目プレビュー">
+        <div class="placeholder">
+          <span class="icon">😌</span>
+          <div class="lbl">閉じ目</div>
+          <div class="sub">必須</div>
         </div>
+      </div>
+
+      <div class="drop-zone" id="zone-half"
+           ondragover="onDragOver(event,this)" ondragleave="onDragLeave(this)"
+           ondrop="onDrop(event,'half')">
+        <input type="file" accept="image/png,image/jpeg,image/webp"
+               onchange="onPick('half',this)" title="伏せ目">
+        <button class="clear-btn" onclick="clearZone(event,'half')" title="削除">✕</button>
+        <img class="thumb" id="thumb-half" alt="伏せ目プレビュー">
+        <div class="placeholder">
+          <span class="icon">😶</span>
+          <div class="lbl">伏せ目</div>
+          <div class="sub">任意</div>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const previewArea = document.getElementById('previewArea');
-        const previewImages = document.getElementById('previewImages');
-        const controls = document.getElementById('controls');
-        const generateBtn = document.getElementById('generateBtn');
-        const loading = document.getElementById('loading');
-        const downloadArea = document.getElementById('downloadArea');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const status = document.getElementById('status');
+  <!-- Controls -->
+  <div class="card">
+    <div class="card-title">設定</div>
+    <div class="controls-row">
 
-        let currentFilename = null;
-        let currentSessionId = null;
+      <div class="ctrl">
+        <label for="preset">瞬きのリズム</label>
+        <select id="preset" onchange="updateHint()">
+          <option value="normal">ふつう</option>
+          <option value="relaxed">のんびり</option>
+          <option value="busy">せわしない</option>
+        </select>
+        <div class="hint" id="preset-hint">自然な人間らしい瞬き（3〜5秒間隔）</div>
+      </div>
 
-        // Upload area click handler
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+      <div class="ctrl">
+        <label for="format">出力形式</label>
+        <select id="format">
+          <option value="apng">APNG（推奨）</option>
+          <option value="gif">GIF</option>
+        </select>
+        <div class="hint" id="format-hint">透過PNG対応・高品質</div>
+      </div>
 
-        // File input change handler
-        fileInput.addEventListener('change', handleFiles);
+    </div>
+  </div>
 
-        // Drag and drop handlers
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
+  <!-- Generate -->
+  <div class="card">
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      ✨ 瞬きアニメーションを生成
+    </button>
+    <div class="status" id="status"></div>
+  </div>
 
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
+  <!-- Result -->
+  <div class="card" id="result-card" style="display:none">
+    <div class="card-title">プレビュー</div>
+    <div class="preview-wrap">
+      <img id="result-img" alt="生成されたアニメーション">
+      <br>
+      <a class="dl-btn" id="dl-btn" download>⬇ ダウンロード</a>
+    </div>
+  </div>
 
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = Array.from(e.dataTransfer.files);
-            handleFiles({ target: { files } });
-        });
+  <footer>Blinky — 瞬き専用アニメーション生成ツール</footer>
+</div>
 
-        // Generate button handler
-        generateBtn.addEventListener('click', generateAnimation);
+<script>
+  const files = { normal: null, closed: null, half: null };
 
-        // Download button handler
-        downloadBtn.addEventListener('click', downloadFile);
+  const presetHints = {
+    normal:  '自然な人間らしい瞬き（3〜5秒間隔）',
+    relaxed: '眠そう・ゆったりとした瞬き（5〜8秒間隔）',
+    busy:    'そわそわ・あわただしい瞬き（1〜3秒間隔）',
+  };
+  const formatHints = {
+    apng: '透過PNG対応・高品質',
+    gif:  '広く対応・透過は1bit限定',
+  };
 
-        async function handleFiles(event) {
-            const files = Array.from(event.target.files);
-            
-            if (files.length === 0) return;
-            if (files.length > 3) {
-                showStatus('最大3枚までアップロードできます', 'error');
-                return;
-            }
+  function updateHint() {
+    document.getElementById('preset-hint').textContent =
+      presetHints[document.getElementById('preset').value] || '';
+    document.getElementById('format-hint').textContent =
+      formatHints[document.getElementById('format').value] || '';
+  }
+  document.getElementById('format').addEventListener('change', updateHint);
 
-            // Validate file types
-            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-            const invalidFiles = files.filter(file => !validTypes.includes(file.type));
-            
-            if (invalidFiles.length > 0) {
-                showStatus('JPG、PNG、WebP形式のファイルのみ対応しています', 'error');
-                return;
-            }
+  // ── Drag & drop ──
+  function onDragOver(e, el) {
+    e.preventDefault();
+    el.classList.add('drag-over');
+  }
+  function onDragLeave(el) {
+    el.classList.remove('drag-over');
+  }
+  function onDrop(e, key) {
+    e.preventDefault();
+    document.getElementById('zone-' + key).classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(key, file);
+  }
+  function onPick(key, input) {
+    if (input.files[0]) setFile(key, input.files[0]);
+  }
 
-            // Upload files
-            const formData = new FormData();
-            files.forEach(file => {
-                formData.append('images', file);
-            });
+  function setFile(key, file) {
+    const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      showStatus('error', `"${file.name}" は非対応の形式です。PNG / JPEG / WebP をお使いください。`);
+      return;
+    }
+    // Revoke previous object URL to avoid memory leak.
+    if (files[key]) URL.revokeObjectURL(document.getElementById('thumb-' + key).src);
+    files[key] = file;
+    document.getElementById('thumb-' + key).src = URL.createObjectURL(file);
+    document.getElementById('zone-' + key).classList.add('filled');
+    hideStatus();
+  }
 
-            try {
-                showStatus('アップロード中...', 'info');
-                
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
+  function clearZone(e, key) {
+    e.stopPropagation();
+    e.preventDefault();
+    if (files[key]) URL.revokeObjectURL(document.getElementById('thumb-' + key).src);
+    files[key] = null;
+    document.getElementById('thumb-' + key).src = '';
+    document.getElementById('zone-' + key).classList.remove('filled');
+    // Reset file input so the same file can be re-selected.
+    const zone = document.getElementById('zone-' + key);
+    const input = zone.querySelector('input[type=file]');
+    input.value = '';
+  }
 
-                const result = await response.json();
+  // ── Status ──
+  function showStatus(type, msg) {
+    const el = document.getElementById('status');
+    el.className = 'status show ' + type;
+    el.innerHTML = type === 'info'
+      ? `<span class="spinner"></span>${msg}`
+      : msg;
+  }
+  function hideStatus() {
+    document.getElementById('status').className = 'status';
+  }
 
-                if (result.success) {
-                    currentSessionId = result.sessionId;
-                    showStatus(result.message, 'success');
-                    showPreview(files);
-                    controls.style.display = 'block';
-                } else {
-                    showStatus('アップロードに失敗しました', 'error');
-                }
-            } catch (error) {
-                showStatus('アップロードエラー: ' + error.message, 'error');
-            }
-        }
+  // ── Generate ──
+  async function generate() {
+    if (!files.normal) { showStatus('error', '通常顔の画像をアップロードしてください。'); return; }
+    if (!files.closed) { showStatus('error', '閉じ目の画像をアップロードしてください。'); return; }
 
-        function showPreview(files) {
-            previewImages.innerHTML = '';
-            
-            files.forEach(file => {
-                const img = document.createElement('img');
-                img.className = 'preview-image';
-                img.src = URL.createObjectURL(file);
-                previewImages.appendChild(img);
-            });
+    const btn = document.getElementById('gen-btn');
+    btn.disabled = true;
+    document.getElementById('result-card').style.display = 'none';
+    showStatus('info', '生成中...');
 
-            previewArea.style.display = 'block';
-        }
+    try {
+      const form = new FormData();
+      form.append('normal', files.normal);
+      form.append('closed', files.closed);
+      if (files.half) form.append('half', files.half);
+      form.append('preset', document.getElementById('preset').value);
+      form.append('format', document.getElementById('format').value);
 
-        async function generateAnimation() {
-            const format = document.getElementById('formatSelect').value;
-            const duration = parseInt(document.getElementById('durationInput').value);
+      const res = await fetch('/process', { method: 'POST', body: form });
 
-            if (!currentSessionId) {
-                showStatus('画像を再度アップロードしてください', 'error');
-                return;
-            }
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg.trim() || `サーバーエラー (HTTP ${res.status})`);
+      }
 
-            loading.style.display = 'block';
-            generateBtn.disabled = true;
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const fmt  = document.getElementById('format').value;
+      const ext  = fmt === 'gif' ? 'gif' : 'png';
 
-            try {
-                const response = await fetch('/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        format: format,
-                        duration: duration,
-                        sessionId: currentSessionId
-                    })
-                });
+      const img = document.getElementById('result-img');
+      // Clear src first to force a reload when the same file is regenerated.
+      img.src = '';
+      img.src = url;
 
-                const result = await response.json();
+      const dl = document.getElementById('dl-btn');
+      dl.href     = url;
+      dl.download = `blink.${ext}`;
 
-                if (result.success) {
-                    currentFilename = result.filename;
-                    showStatus(result.message, 'success');
-                    downloadArea.style.display = 'block';
-                } else {
-                    showStatus('生成に失敗しました: ' + result.message, 'error');
-                }
-            } catch (error) {
-                showStatus('生成エラー: ' + error.message, 'error');
-            } finally {
-                loading.style.display = 'none';
-                generateBtn.disabled = false;
-            }
-        }
-
-        function downloadFile() {
-            if (currentFilename) {
-                window.location.href = '/download/' + currentFilename;
-            }
-        }
-
-        function showStatus(message, type) {
-            status.textContent = message;
-            status.className = 'status ' + type;
-            status.style.display = 'block';
-            
-            // Auto-hide after 5 seconds for success/info messages
-            if (type === 'success' || type === 'info') {
-                setTimeout(() => {
-                    status.style.display = 'none';
-                }, 5000);
-            }
-        }
-    </script>
+      document.getElementById('result-card').style.display = '';
+      showStatus('ok', 'アニメーションが生成されました！');
+      setTimeout(hideStatus, 4000);
+    } catch (err) {
+      showStatus('error', '生成に失敗しました: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+</script>
 </body>
 </html>
