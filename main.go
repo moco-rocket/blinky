@@ -94,9 +94,13 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
-	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
 }
+
+// maxImageDim is the maximum allowed width or height of an input image.
+// This prevents memory exhaustion from very large images on Cloud Run instances
+// with limited memory.
+const maxImageDim = 4096
 
 // readFormImage reads a named file field from a multipart form and decodes it
 // as an image. Supports PNG, JPEG, and WebP (via registered decoders).
@@ -113,5 +117,14 @@ func readFormImage(r *http.Request, field string) (image.Image, error) {
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(data))
-	return img, err
+	if err != nil {
+		return nil, err
+	}
+
+	b := img.Bounds()
+	if b.Dx() > maxImageDim || b.Dy() > maxImageDim {
+		return nil, fmt.Errorf("画像が大きすぎます（最大 %d px、実際 %dx%d）", maxImageDim, b.Dx(), b.Dy())
+	}
+
+	return img, nil
 }
