@@ -55,6 +55,19 @@ func EncodeAPNG(w io.Writer, frames []blink.Frame) error {
 		}
 	}
 
+	// Ancillary chunks (sRGB, gAMA, cHRM, iCCP, …) from the first frame.
+	// These must appear before IDAT/acTL per the PNG spec.
+	for _, c := range firstChunks {
+		switch c.typ {
+		case "IHDR", "IDAT", "IEND":
+			// handled separately
+		default:
+			if err := writeChunk(w, c.typ, c.data); err != nil {
+				return err
+			}
+		}
+	}
+
 	// acTL (animation control): num_frames, num_plays=0 (infinite)
 	actl := make([]byte, 8)
 	binary.BigEndian.PutUint32(actl[0:4], uint32(len(frames)))
