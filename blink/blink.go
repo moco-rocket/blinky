@@ -3,7 +3,6 @@ package blink
 import (
 	"image"
 	"image/draw"
-	"math/rand"
 )
 
 // Frame is a single animation frame with its display duration.
@@ -12,47 +11,40 @@ type Frame struct {
 	Delay int // 10ms units (1/100 sec), same as GIF and APNG centiseconds
 }
 
-// Preset defines blink timing parameters for a character personality.
+// Preset defines blink timing for one character personality.
+// The animation is always: ぱち（単発） → wait → ぱちぱち（連続）
 type Preset struct {
-	WaitMin           int     // minimum wait between blinks (10ms units)
-	WaitMax           int     // maximum wait between blinks (10ms units)
-	CloseTime         int     // closed-eye frame duration (10ms units)
-	HalfTime          int     // half-open frame duration (10ms units)
-	DoubleBlinkChance float64 // probability of a second blink following the first
-	DoubleWaitMin     int     // minimum gap between double blinks (10ms units)
-	DoubleWaitMax     int     // maximum gap between double blinks (10ms units)
+	WaitSingle int // wait before the single blink (10ms units)
+	WaitDouble int // wait before the double blink (10ms units)
+	DoubleWait int // gap between the two blinks in a double blink (10ms units)
+	CloseTime  int // closed-eye frame duration (10ms units)
+	HalfTime   int // half-open frame duration (10ms units)
 }
 
 var presets = map[string]Preset{
 	// ふつう: natural human blink rhythm
 	"normal": {
-		WaitMin:           280,
-		WaitMax:           480,
-		CloseTime:         4,
-		HalfTime:          7,
-		DoubleBlinkChance: 0.25,
-		DoubleWaitMin:     60,
-		DoubleWaitMax:     100,
+		WaitSingle: 350,
+		WaitDouble: 400,
+		DoubleWait: 80,
+		CloseTime:  4,
+		HalfTime:   7,
 	},
 	// のんびり: slow, drowsy blink
 	"relaxed": {
-		WaitMin:           450,
-		WaitMax:           800,
-		CloseTime:         5,
-		HalfTime:          9,
-		DoubleBlinkChance: 0.10,
-		DoubleWaitMin:     80,
-		DoubleWaitMax:     130,
+		WaitSingle: 600,
+		WaitDouble: 700,
+		DoubleWait: 110,
+		CloseTime:  5,
+		HalfTime:   9,
 	},
 	// せわしない: rapid, fidgety blink
 	"busy": {
-		WaitMin:           100,
-		WaitMax:           260,
-		CloseTime:         3,
-		HalfTime:          5,
-		DoubleBlinkChance: 0.45,
-		DoubleWaitMin:     40,
-		DoubleWaitMax:     70,
+		WaitSingle: 160,
+		WaitDouble: 200,
+		DoubleWait: 50,
+		CloseTime:  3,
+		HalfTime:   5,
 	},
 }
 
@@ -64,18 +56,11 @@ func GetPreset(name string) Preset {
 	return presets["normal"]
 }
 
-func randBetween(min, max int) int {
-	if min >= max {
-		return min
-	}
-	return min + rand.Intn(max-min)
-}
-
-// GenerateFrames builds the full blink animation frame sequence.
+// GenerateFrames builds a fixed blink sequence: ぱち → wait → ぱちぱち.
 //
-// Closing is fast (normal → closed in one cut).
+// Closing is fast (normal → closed in one frame).
 // Opening is gradual (closed → half → normal) when half is provided.
-// half may be nil; the animation falls back to closed → normal.
+// If half is nil the animation falls back to closed → normal.
 func GenerateFrames(normal, closed, half image.Image, p Preset) []Frame {
 	hasHalf := half != nil
 
@@ -93,29 +78,21 @@ func GenerateFrames(normal, closed, half image.Image, p Preset) []Frame {
 
 	var frames []Frame
 
-	// addBlink appends one blink sequence: wait → close → (half →) normal.
-	// waitDelay is the duration of the leading normal-face frame.
-	addBlink := func(waitDelay int) {
-		// Normal face (wait)
-		frames = append(frames, Frame{Image: normal, Delay: waitDelay})
-		// Fast close
+	// blink appends: [normal wait] [closed] [half?]
+	blink := func(wait int) {
+		frames = append(frames, Frame{Image: normal, Delay: wait})
 		frames = append(frames, Frame{Image: closed, Delay: p.CloseTime})
-		// Gradual open (half-eye if available)
 		if hasHalf {
 			frames = append(frames, Frame{Image: half, Delay: p.HalfTime})
 		}
 	}
 
-	// Generate 3 blink cycles with randomised timing and occasional double blinks.
-	for i := 0; i < 3; i++ {
-		wait := randBetween(p.WaitMin, p.WaitMax)
-		addBlink(wait)
+	// ぱち（単発瞬き）
+	blink(p.WaitSingle)
 
-		if rand.Float64() < p.DoubleBlinkChance {
-			doubleWait := randBetween(p.DoubleWaitMin, p.DoubleWaitMax)
-			addBlink(doubleWait)
-		}
-	}
+	// ぱちぱち（二連瞬き）: first blink → short normal → second blink
+	blink(p.WaitDouble)
+	blink(p.DoubleWait)
 
 	return frames
 }
