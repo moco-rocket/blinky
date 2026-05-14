@@ -93,7 +93,7 @@ func EncodeAPNG(w io.Writer, frames []blink.Frame) error {
 		binary.BigEndian.PutUint16(fctl[20:22], uint16(f.Delay))
 		binary.BigEndian.PutUint16(fctl[22:24], 100)
 		fctl[24] = 0 // dispose_op: APNG_DISPOSE_OP_NONE
-		fctl[25] = 0 // blend_op:   APNG_BLEND_OP_SOURCE
+		fctl[25] = 1 // blend_op:   APNG_BLEND_OP_OVER
 
 		if err := writeChunk(w, "fcTL", fctl); err != nil {
 			return err
