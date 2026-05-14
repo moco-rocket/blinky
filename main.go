@@ -10,7 +10,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"blinky/blink"
 	"blinky/encoder"
@@ -69,6 +71,15 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 		half = img
 	}
 
+	// Derive output base name from the uploaded normal image filename.
+	outBase := "blinky"
+	if fhs := r.MultipartForm.File["normal"]; len(fhs) > 0 {
+		stem := strings.TrimSuffix(filepath.Base(fhs[0].Filename), filepath.Ext(fhs[0].Filename))
+		if stem != "" {
+			outBase = stem + "_blinky"
+		}
+	}
+
 	preset := blink.GetPreset(r.FormValue("preset"))
 	frames := blink.GenerateFrames(normal, closed, half, preset)
 
@@ -83,14 +94,14 @@ func handleProcess(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "image/gif")
-		w.Header().Set("Content-Disposition", `attachment; filename="blink.gif"`)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+outBase+`.gif"`)
 	default: // apng
 		if err := encoder.EncodeAPNG(&buf, frames); err != nil {
 			http.Error(w, "APNG生成に失敗しました: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "image/png")
-		w.Header().Set("Content-Disposition", `attachment; filename="blink.png"`)
+		w.Header().Set("Content-Disposition", `attachment; filename="`+outBase+`.png"`)
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))

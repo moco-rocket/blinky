@@ -3,10 +3,10 @@ package encoder
 import (
 	"image"
 	"image/color"
-	"image/color/palette"
 	"image/draw"
 	"image/gif"
 	"io"
+	"sort"
 
 	"blinky/blink"
 )
@@ -21,19 +21,8 @@ func EncodeGIF(w io.Writer, frames []blink.Frame) error {
 		return nil
 	}
 
-	// 256-entry palette: transparent at index 0, Plan9 colours after.
-	pal := make(color.Palette, 1, 256)
-	pal[0] = color.RGBA{0, 0, 0, 0} // transparent sentinel
-	for i, c := range palette.Plan9 {
-		if i >= 255 {
-			break
-		}
-		pal = append(pal, c)
-	}
-
+	pal := buildPalette(frames)
 	anim := &gif.GIF{LoopCount: 0}
-
-	// opaqueBlack is used as the composite background.
 	opaqueBlack := &image.Uniform{C: color.NRGBA{0, 0, 0, 255}}
 
 	for _, f := range frames {
@@ -66,4 +55,46 @@ func EncodeGIF(w io.Writer, frames []blink.Frame) error {
 	}
 
 	return gif.EncodeAll(w, anim)
+}
+
+// buildPalette samples all opaque pixels from every frame and returns a
+// 255-colour palette sorted by frequency (plus index 0 for transparency).
+// For illustration-style images this preserves the exact colours of the
+// artwork far better than a generic palette such as Plan9.
+func buildPalette(frames []blink.Frame) color.Palette {
+	counts := make(map[[3]byte]int)
+	for _, f := range frames {
+		b := f.Image.Bounds()
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			for x := b.Min.X; x < b.Max.X; x++ {
+				r, g, bl, a := f.Image.At(x, y).RGBA()
+				if a < 0x8000 {
+					continue
+				}
+				counts[[3]byte{byte(r >> 8), byte(g >> 8), byte(bl >> 8)}]++
+			}
+		}
+	}
+
+	type entry struct {
+		rgb [3]byte
+		n   int
+	}
+	entries := make([]entry, 0, len(counts))
+	for k, n := range counts {
+		entries = append(entries, entry{k, n})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].n > entries[j].n })
+
+	pal := make(color.Palette, 1, 256)
+	pal[0] = color.RGBA{0, 0, 0, 0} // transparent sentinel
+	limit := 255
+	if len(entries) < limit {
+		limit = len(entries)
+	}
+	for i := 0; i < limit; i++ {
+		e := entries[i]
+		pal = append(pal, color.RGBA{e.rgb[0], e.rgb[1], e.rgb[2], 255})
+	}
+	return pal
 }
